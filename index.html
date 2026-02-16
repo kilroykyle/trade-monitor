@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Monitor - Live Signal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-2: #12121a;
+            --bg-3: #1a1a28;
+            --primary: #00d4ff;
+            --success: #00ff88;
+            --danger: #ff3366;
+            --warning: #ffaa00;
+            --text: #e0e0e0;
+            --text-dim: #808080;
+            --border: rgba(0, 212, 255, 0.2);
+            --glow: rgba(0, 212, 255, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .header-left h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .header-left .subtitle {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-value.positive { color: var(--success); }
+        .stat-value.negative { color: var(--danger); }
+        .stat-value.neutral { color: var(--primary); }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Panel */
+        .panel {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--glow);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+
+        /* Price Chart */
+        .price-chart {
+            height: 300px;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            padding: 20px 0;
+            position: relative;
+        }
+
+        .price-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--primary), var(--success));
+            border-radius: 2px 2px 0 0;
+            min-height: 20px;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .price-bar:hover {
+            opacity: 1;
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        /* Signal Feed */
+        .signal-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .signal-item {
+            background: var(--bg-3);
+            border-left: 3px solid var(--success);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .signal-item:hover {
+            transform: translateX(5px);
+        }
+
+        .signal-item.sell {
+            border-left-color: var(--danger);
+        }
+
+        .signal-item.hold {
+            border-left-color: var(--warning);
+        }
+
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .signal-coin {
+            font-weight: 700;
+            font-size: 1.1rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .signal-type {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .signal-type.buy { background: var(--success); color: var(--bg); }
+        .signal-type.sell { background: var(--danger); color: #fff; }
+        .signal-type.hold { background: var(--warning); color: var(--bg); }
+
+        .signal-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Bot Controls */
+        .bot-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: var(--bg-3);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .bot-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .bot-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .bot-indicator.active {
+            background: var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .bot-name {
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bot-mode {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        /* Trade History */
+        .trade-table {
+            width: 100%;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .trade-table th {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        .trade-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .trade-table tr:hover {
+            background: var(--bg-3);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+        }
+
+        .spinner {
+            border: 3px solid var(--bg-3);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>📊 Trade Monitor</h1>
+                <p class="subtitle">Real-time crypto signals & bot management</p>
+            </div>
+            <div class="header-right">
+                <div class="live-indicator">
+                    <div class="live-dot"></div>
+                    <span id="last-update">LIVE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value neutral" id="stat-capital">$50.00</div>
+                <div class="stat-label">Capital</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value positive" id="stat-pnl">+$0.00</div>
+                <div class="stat-label">Total P&L</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value neutral" id="stat-trades">0</div>
+                <div class="stat-label">Total Trades</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value neutral" id="stat-winrate">0%</div>
+                <div class="stat-label">Win Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value neutral" id="stat-signals">0</div>
+                <div class="stat-label">Active Signals</div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Price Chart -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">📈 BTC Price (24h)</div>
+                    <div class="panel-actions">
+                        <button class="btn btn-sm" onclick="refreshData()">Refresh</button>
+                    </div>
+                </div>
+                <div class="price-chart" id="price-chart">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading price data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Signal Feed -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">🎯 Live Signals</div>
+                    <div class="panel-actions">
+                        <button class="btn btn-sm btn-success" onclick="generateSignal()">Test Signal</button>
+                    </div>
+                </div>
+                <div class="signal-feed" id="signal-feed">
+                    <div class="loading">
+                        <p>Waiting for signals...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bot Controls -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">🤖 Bot Management</div>
+            </div>
+            <div class="bot-status">
+                <div class="bot-info">
+                    <div class="bot-indicator" id="bot-btc-indicator"></div>
+                    <div>
+                        <div class="bot-name">BTC Momentum Bot</div>
+                        <div class="bot-mode" id="bot-btc-mode">DRY RUN MODE</div>
+                    </div>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-sm btn-success" onclick="startBot('btc')">Start</button>
+                    <button class="btn btn-sm btn-danger" onclick="stopBot('btc')">Stop</button>
+                </div>
+            </div>
+            <div class="bot-status">
+                <div class="bot-info">
+                    <div class="bot-indicator" id="bot-signal-indicator"></div>
+                    <div>
+                        <div class="bot-name">Signal Scraper</div>
+                        <div class="bot-mode" id="bot-signal-mode">Every 5 minutes</div>
+                    </div>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-sm btn-success" onclick="startBot('signal')">Start</button>
+                    <button class="btn btn-sm btn-danger" onclick="stopBot('signal')">Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade History -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">📜 Trade History</div>
+            </div>
+            <table class="trade-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Coin</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>P&L</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-history">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-dim);">
+                            No trades yet. Waiting for bot signals...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for now - will be replaced with real API calls
+        let mockPrice = 98000;
+        
+        // Initialize dashboard
+        async function init() {
+            loadPriceChart();
+            loadSignals();
+            checkBotStatus();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshData, 30000);
+        }
+
+        // Load price chart
+        function loadPriceChart() {
+            const chart = document.getElementById('price-chart');
+            chart.innerHTML = '';
+            
+            // Generate 24 bars (one per hour)
+            for (let i = 0; i < 24; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'price-bar';
+                const height = 50 + Math.random() * 50; // 50-100%
+                bar.style.height = height + '%';
+                bar.title = `Hour ${i}: $${(mockPrice + (Math.random() - 0.5) * 2000).toFixed(2)}`;
+                chart.appendChild(bar);
+            }
+        }
+
+        // Load signals
+        function loadSignals() {
+            // Will fetch from /api/signals
+            // For now, show placeholder
+        }
+
+        // Check bot status
+        async function checkBotStatus() {
+            // Will fetch from /api/bot-status
+            // For now, show as inactive
+        }
+
+        // Refresh all data
+        function refreshData() {
+            loadPriceChart();
+            loadSignals();
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Generate test signal
+        function generateSignal() {
+            const feed = document.getElementById('signal-feed');
+            const types = ['buy', 'sell', 'hold'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            const price = (mockPrice + (Math.random() - 0.5) * 1000).toFixed(2);
+            
+            const signal = document.createElement('div');
+            signal.className = `signal-item ${type}`;
+            signal.innerHTML = `
+                <div class="signal-header">
+                    <div class="signal-coin">BTC</div>
+                    <div class="signal-type ${type}">${type.toUpperCase()}</div>
+                </div>
+                <div class="signal-details">
+                    <div>Price: $${price}</div>
+                    <div>Time: ${new Date().toLocaleTimeString()}</div>
+                    <div>Momentum: ${(Math.random() * 10 - 5).toFixed(2)}%</div>
+                    <div>Confidence: ${Math.floor(Math.random() * 40 + 60)}%</div>
+                </div>
+            `;
+            
+            feed.insertBefore(signal, feed.firstChild);
+            
+            // Keep only last 10 signals
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Start bot
+        function startBot(botId) {
+            console.log(`Starting ${botId} bot...`);
+            // Will call /api/bot/start
+            alert(`${botId} bot starting... (API not connected yet)`);
+        }
+
+        // Stop bot
+        function stopBot(botId) {
+            console.log(`Stopping ${botId} bot...`);
+            // Will call /api/bot/stop
+            alert(`${botId} bot stopped... (API not connected yet)`);
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
